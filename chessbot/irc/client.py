@@ -20,8 +20,8 @@ class IRCClient:
     def send(self, string):
         self.irc.send(bytes(string, "UTF-8"))
 
-    def privmsg(self, chan, msg):
-        self.send("PRIVMSG %s %s\n" % (chan, msg))
+    def privmsg(self, dest, msg):
+        self.send("PRIVMSG %s %s\n" % (dest, msg))
 
     def join(self, channel):
         self.send("JOIN %s\n" % channel)
@@ -34,9 +34,6 @@ class IRCClient:
         self.irc.close()
 
     def get_text(self):
-        text = self.irc.recv(2040)
+        text = self.irc.recv(512).decode()
 
-        if text.find(bytes("PING", "UTF-8")) != -1:
-            self.send("PONG %s\r\n" % text.split()[1])
-
-        return text.decode()
+        return text
