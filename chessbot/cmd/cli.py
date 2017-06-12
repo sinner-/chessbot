@@ -27,7 +27,7 @@ def main():
                               (str(datetime.datetime.now().time()),
                                response[0],
                                response[2],
-                               response[3],
+                               response[3].strip(),
                               ))
             db.commit()
 
