@@ -14,23 +14,23 @@ class IRCClient:
 
         print("connecting to %s:%d" % (server, port))
         self.irc.connect((server, port))
-        self.send("USER %s %s %s :IRC ChessBot\n" % (nick, nick, nick))
-        self.send("NICK %s\n" % nick)
+        self.send("USER %s %s %s :IRC ChessBot" % (nick, nick, nick))
+        self.send("NICK %s" % nick)
 
-    def send(self, string):
-        self.irc.send(bytes(string, "UTF-8"))
+    def send(self, message):
+        self.irc.send(bytes("%s\n" % message, "UTF-8"))
 
     def privmsg(self, dest, msg):
-        self.send("PRIVMSG %s %s\n" % (dest, msg))
+        self.send("PRIVMSG %s :%s" % (dest, msg))
 
     def join(self, channel):
-        self.send("JOIN %s\n" % channel)
+        self.send("JOIN %s" % channel)
 
     def part(self, channel):
-        self.send("PART %s\n" % channel)
+        self.send("PART %s" % channel)
 
     def quit(self):
-        self.send("QUIT\n")
+        self.send("QUIT")
         self.irc.close()
 
     def get_text(self):
