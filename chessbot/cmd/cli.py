@@ -32,7 +32,7 @@ def main():
             db.commit()
 
         if response[0] == "PING":
-            irc.send("PONG %s\r\n" % response[1])
+            irc.send("PONG %s" % response[1])
             print("PONG sent.")
 
         if response[1] == "PRIVMSG" and response[3].startswith(control_pattern):
@@ -42,17 +42,30 @@ def main():
                 if response[3].startswith("%shello" % control_pattern):
                     irc.privmsg(targets[0], "Hello")
                     continue
+                if response[3].startswith("%smpfhf" % control_pattern):
+                    mpfhfcall = response[3].split(' ', 3)
+                    if len(mpfhfcall) > 3:
+                        bits = int(mpfhfcall[1])
+                        message = mpfhfcall[3]
+                        if bits > 0 and bits <= 128:
+                            irc.privmsg(targets[0], ("You want me hash this %s in %d bits?" % (message, bits)))
+                            irc.privmsg(targets[0], message)
+                        else:
+                            irc.privmsg(targets[0], "I only hash up to 128-bits.")
+                    else:
+                        irc.privmsg(targets[0], ("Please call me in the format: %smpfhf <bits> <message>" % control_pattern))
+                    continue
             else:
                 target = response[0].split("!")[0].strip(":")
 
                 if response[3].startswith("%sjoin" % control_pattern):
                     channel = response[3].split(' ')[1]
-                    irc.privmsg(target, "Joining %s" % channel)
+                    irc.privmsg(target, ("Joining %s" % channel))
                     irc.join(channel)
                     continue
                 if response[3].startswith("%spart" % control_pattern):
                     channel = response[3].split(' ')[1]
-                    irc.privmsg(target, "Leaving %s" % channel)
+                    irc.privmsg(target, ("Leaving %s" % channel))
                     irc.part(channel)
                     continue
                 if response[3].startswith("%squit" % control_pattern):
