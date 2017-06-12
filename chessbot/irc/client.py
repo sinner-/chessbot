@@ -31,6 +31,7 @@ class IRCClient:
 
     def quit(self):
         self.send("QUIT\n")
+        self.irc.close()
 
     def get_text(self):
         text = self.irc.recv(2040)
