@@ -3,12 +3,11 @@ import re
 
 def main():
     server = "irc.freenode.net"
-    port = 6667
+    port = 6697
     nickname = "chessbotr"
     channels = ["#testchess"]
 
-    irc = IRCClient()
-    irc.connect(server, port, nickname)
+    irc = IRCClient(server, port, nickname)
     for channel in channels:
         irc.join(channel)
 
