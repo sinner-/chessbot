@@ -12,7 +12,6 @@ class IRCClient:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.ssl_sock = context.wrap_socket(self.sock, server_hostname=server)
 
-        print("connecting to %s:%d" % (server, port))
         self.ssl_sock.connect((server, port))
         self.send("USER %s %s %s :IRC ChessBot" % (nick, nick, nick))
         self.send("NICK %s" % nick)
