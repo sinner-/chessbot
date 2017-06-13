@@ -1,6 +1,7 @@
 from chessbot.irc.client import IRCClient
 from chessbot.irc.logger import Logger
 from chessbot.db.sqlite import DB
+from chessbot.util.mpfhf import mpfhf
 
 def main():
     db_path = "bot.db"
@@ -42,16 +43,7 @@ def main():
                         irc.privmsg(message['dst'], "Hello")
                         continue
                     if message['text'].startswith("mpfhf"):
-                        mpfhfcall = message['text'].split(' ', 2)
-                        if len(mpfhfcall) > 2:
-                            bits = int(mpfhfcall[1])
-                            hash_text = mpfhfcall[2]
-                            if bits > 0 and bits <= 128:
-                                irc.privmsg(message['dst'], ("Proceeding with %d-bit hash of: %s" % (bits, hash_text)))
-                            else:
-                                irc.privmsg(message['dst'], "I only hash up to 128-bits.")
-                        else:
-                            irc.privmsg(message['dst'], ("Please call me in the format: %smpfhf <bits> <message>" % control_pattern))
+                        irc.privmsg(message['dst'], mpfhf(message['text'], control_pattern))
                         continue
                 else:
                     target = message['src'].split("!")[0].strip(":")
