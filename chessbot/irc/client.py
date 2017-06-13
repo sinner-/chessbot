@@ -20,6 +20,9 @@ class IRCClient:
     def send(self, message):
         self.ssl_sock.send(bytes("%s\n" % message, "UTF-8"))
 
+    def get_text(self):
+        return self.ssl_sock.recv(512).decode()
+
     def privmsg(self, dest, msg):
         self.send("PRIVMSG %s :%s" % (dest, msg))
 
@@ -33,7 +36,3 @@ class IRCClient:
         self.send("QUIT")
         self.ssl_sock.close()
 
-    def get_text(self):
-        text = self.ssl_sock.recv(512).decode()
-
-        return text
