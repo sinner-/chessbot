@@ -1,4 +1,3 @@
-import re
 import datetime
 from chessbot.irc.client import IRCClient
 from chessbot.db.sqlite import DB
@@ -17,59 +16,63 @@ def main():
     for channel in channels:
         irc.join(channel)
 
-    channel_pattern = re.compile("#\w+")
-
     while 1:
         response = irc.get_text().split(' ', 3)
         print(' '.join(response), end="")
-        if len(response) > 3:
-            db.cursor.execute("INSERT INTO logs VALUES (?, ?, ?, ?);",
-                              (str(datetime.datetime.now().time()),
-                               response[0],
-                               response[2],
-                               response[3].strip(),
-                              ))
-            db.commit()
 
         if response[0] == "PING":
             irc.send("PONG %s" % response[1])
             print("PONG sent.")
 
-        if response[1] == "PRIVMSG" and response[3].startswith(control_pattern):
-            targets = re.findall(channel_pattern, response[2])
+        if len(response) > 3:
+            message = {}
+            message['src'] = response[0]
+            message['type'] = response[1]
+            message['dst'] = response[2]
+            message['text'] = response[3].strip()
 
-            if targets:
-                if response[3].startswith("%shello" % control_pattern):
-                    irc.privmsg(targets[0], "Hello")
-                    continue
-                if response[3].startswith("%smpfhf" % control_pattern):
-                    mpfhfcall = response[3].split(' ', 3)
-                    if len(mpfhfcall) > 3:
-                        bits = int(mpfhfcall[1])
-                        message = mpfhfcall[3]
-                        if bits > 0 and bits <= 128:
-                            irc.privmsg(targets[0], ("You want me hash this %s in %d bits?" % (message, bits)))
-                            irc.privmsg(targets[0], message)
+            db.cursor.execute("INSERT INTO logs VALUES (?, ?, ?, ?);",
+                              (str(datetime.datetime.now().time()),
+                               message['src'],
+                               message['dst'],
+                               message['text'],
+                              ))
+            db.commit()
+
+            if message['type'] == "PRIVMSG" and message['text'].startswith(control_pattern):
+                message['text'] = message['text'].lstrip(control_pattern)
+
+                if message['dst'].startswith("#"):
+                    if message['text'] == "hello":
+                        irc.privmsg(message['dst'], "Hello")
+                        continue
+                    if message['text'].startswith("mpfhf"):
+                        mpfhfcall = message['text'].split(' ', 2)
+                        if len(mpfhfcall) > 2:
+                            bits = int(mpfhfcall[1])
+                            hash_text = mpfhfcall[2]
+                            if bits > 0 and bits <= 128:
+                                irc.privmsg(message['dst'], ("Proceeding with %d-bit hash of: %s" % (bits, hash_text)))
+                            else:
+                                irc.privmsg(message['dst'], "I only hash up to 128-bits.")
                         else:
-                            irc.privmsg(targets[0], "I only hash up to 128-bits.")
-                    else:
-                        irc.privmsg(targets[0], ("Please call me in the format: %smpfhf <bits> <message>" % control_pattern))
-                    continue
-            else:
-                target = response[0].split("!")[0].strip(":")
+                            irc.privmsg(message['dst'], ("Please call me in the format: %smpfhf <bits> <message>" % control_pattern))
+                        continue
+                else:
+                    target = message['src'].split("!")[0].strip(":")
 
-                if response[3].startswith("%sjoin" % control_pattern):
-                    channel = response[3].split(' ')[1]
-                    irc.privmsg(target, ("Joining %s" % channel))
-                    irc.join(channel)
-                    continue
-                if response[3].startswith("%spart" % control_pattern):
-                    channel = response[3].split(' ')[1]
-                    irc.privmsg(target, ("Leaving %s" % channel))
-                    irc.part(channel)
-                    continue
-                if response[3].startswith("%squit" % control_pattern):
-                    irc.privmsg(target, "Quitting!")
-                    irc.quit()
-                    db.close()
-                    exit()
+                    if message['text'].startswith("join"):
+                        channel = message['text'].split(' ')[1]
+                        irc.privmsg(target, ("Joining %s" % channel))
+                        irc.join(channel)
+                        continue
+                    if message['text'].startswith("part"):
+                        channel = message['text'].split(' ')[1]
+                        irc.privmsg(target, ("Leaving %s" % channel))
+                        irc.part(channel)
+                        continue
+                    if message['text'] == "quit":
+                        irc.privmsg(target, "Quitting!")
+                        irc.quit()
+                        db.close()
+                        exit()
