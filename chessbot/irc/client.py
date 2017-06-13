@@ -10,15 +10,15 @@ class IRCClient:
         context.check_hostname = True
         context.load_default_certs()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.irc = context.wrap_socket(self.sock, server_hostname=server)
+        self.ssl_sock = context.wrap_socket(self.sock, server_hostname=server)
 
         print("connecting to %s:%d" % (server, port))
-        self.irc.connect((server, port))
+        self.ssl_sock.connect((server, port))
         self.send("USER %s %s %s :IRC ChessBot" % (nick, nick, nick))
         self.send("NICK %s" % nick)
 
     def send(self, message):
-        self.irc.send(bytes("%s\n" % message, "UTF-8"))
+        self.ssl_sock.send(bytes("%s\n" % message, "UTF-8"))
 
     def privmsg(self, dest, msg):
         self.send("PRIVMSG %s :%s" % (dest, msg))
@@ -31,9 +31,9 @@ class IRCClient:
 
     def quit(self):
         self.send("QUIT")
-        self.irc.close()
+        self.ssl_sock.close()
 
     def get_text(self):
-        text = self.irc.recv(512).decode()
+        text = self.ssl_sock.recv(512).decode()
 
         return text
