@@ -1,5 +1,5 @@
-import datetime
 from chessbot.irc.client import IRCClient
+from chessbot.irc.logger import Logger
 from chessbot.db.sqlite import DB
 
 def main():
@@ -11,6 +11,7 @@ def main():
     control_pattern = ":#!"
 
     db = DB(db_path)
+    logger = Logger(db)
 
     irc = IRCClient(server, port, nickname)
     for channel in channels:
@@ -31,13 +32,7 @@ def main():
             message['dst'] = response[2]
             message['text'] = response[3].strip()
 
-            db.cursor.execute("INSERT INTO logs VALUES (?, ?, ?, ?);",
-                              (str(datetime.datetime.now().time()),
-                               message['src'],
-                               message['dst'],
-                               message['text'],
-                              ))
-            db.commit()
+            logger.log(message['src'], message['dst'], message['text'])
 
             if message['type'] == "PRIVMSG" and message['text'].startswith(control_pattern):
                 message['text'] = message['text'].lstrip(control_pattern)
