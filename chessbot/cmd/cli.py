@@ -18,7 +18,7 @@ def main():
     for channel in channels:
         irc.join(channel)
 
-    while 1:
+    while True:
         response = irc.get_text().split(' ', 3)
         print(' '.join(response), end="")
 
@@ -26,40 +26,41 @@ def main():
             irc.send("PONG %s" % response[1])
             print("PONG sent.")
 
-        if len(response) > 3:
-            message = {}
-            message['src'] = response[0]
-            message['type'] = response[1]
-            message['dst'] = response[2]
-            message['text'] = response[3].strip()
+        if len(response) != 4:
+            continue
 
-            logger.log(message['src'], message['dst'], message['text'])
+        message = {}
+        message['src'] = response[0]
+        message['type'] = response[1]
+        message['dst'] = response[2]
+        message['text'] = response[3].strip()
 
-            if message['type'] == "PRIVMSG" and message['text'].startswith(control_pattern):
-                message['text'] = message['text'].lstrip(control_pattern)
+        logger.log(message['src'], message['dst'], message['text'])
 
-                if message['dst'].startswith("#"):
-                    if message['text'] == "hello":
-                        irc.privmsg(message['dst'], "Hello")
-                        continue
-                    if message['text'].startswith("mpfhf"):
-                        irc.privmsg(message['dst'], mpfhf(message['text'], control_pattern))
-                        continue
-                else:
-                    target = message['src'].split("!")[0].strip(":")
+        if not (message['type'] == "PRIVMSG" and message['text'].startswith(control_pattern)):
+            continue
 
-                    if message['text'].startswith("join"):
-                        channel = message['text'].split(' ')[1]
-                        irc.privmsg(target, ("Joining %s" % channel))
-                        irc.join(channel)
-                        continue
-                    if message['text'].startswith("part"):
-                        channel = message['text'].split(' ')[1]
-                        irc.privmsg(target, ("Leaving %s" % channel))
-                        irc.part(channel)
-                        continue
-                    if message['text'] == "quit":
-                        irc.privmsg(target, "Quitting!")
-                        irc.quit()
-                        db.close()
-                        exit()
+        command = message['text'].lstrip(control_pattern)
+
+        #chan based commands
+        if message['dst'].startswith("#"):
+            if command == "hello":
+                irc.privmsg(message['dst'], "Hello")
+            elif command.startswith("mpfhf"):
+                irc.privmsg(message['dst'], mpfhf(command, control_pattern))
+        #privmsg commands
+        else:
+            target = message['src'].split("!")[0].strip(":")
+            if command.startswith("join"):
+                channel = command.split(' ')[1]
+                irc.privmsg(target, ("Joining %s" % channel))
+                irc.join(channel)
+            elif command.startswith("part"):
+                channel = command.split(' ')[1]
+                irc.privmsg(target, ("Leaving %s" % channel))
+                irc.part(channel)
+            elif command == "quit":
+                irc.privmsg(target, "Quitting!")
+                irc.quit()
+                db.close()
+                exit()
