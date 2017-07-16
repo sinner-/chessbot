@@ -1,7 +1,6 @@
 from chessbot.irc.client import IRCClient
 from chessbot.irc.logger import Logger
 from chessbot.db.sqlite import DB
-from chessbot.util.mpfhf import mpfhf
 
 def main():
     db_path = "bot.db"
@@ -10,6 +9,7 @@ def main():
     nickname = "chessbot"
     channels = ["#testchess"]
     control_pattern = ":#!"
+
 
     db = DB(db_path)
     logger = Logger(db)
@@ -40,26 +40,31 @@ def main():
         if not (message['type'] == "PRIVMSG" and message['text'].startswith(control_pattern)):
             continue
 
-        command = message['text'].lstrip(control_pattern)
+        command = message['text'].lstrip(control_pattern).split(' ')
 
         #chan based commands
         if message['dst'].startswith("#") and message['dst'] in channels:
-            if command == "hello":
+            if command[0] == "hello":
                 irc.privmsg(message['dst'], "Hello")
-            elif command.startswith("mpfhf"):
-                irc.privmsg(message['dst'], mpfhf(command, control_pattern))
+
         #privmsg commands
         else:
-            target = message['src'].split("!")[0].strip(":")
-            if command.startswith("join"):
-                channel = command.split(' ')[1]
+            target = message['src'].split("!", 1)[0].strip(":")
+            if command[0] == "join" and len(command) == 2:
+                channel = command[1]
+                if channel in channels:
+                    irc.privmsg(target, "Already in %s" % channel)
+                    continue
                 irc.privmsg(target, ("Joining %s" % channel))
                 irc.join(channel)
-            elif command.startswith("part"):
-                channel = command.split(' ')[1]
+            elif command[0] == "part" and len(command) == 2:
+                channel = command[1]
+                if channel not in channels:
+                    irc.privmsg(target, "Not in %s" % channel)
+                    continue
                 irc.privmsg(target, ("Leaving %s" % channel))
                 irc.part(channel)
-            elif command == "quit":
+            elif command[0] == "quit":
                 irc.privmsg(target, "Quitting!")
                 irc.quit()
                 db.close()
