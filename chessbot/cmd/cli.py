@@ -1,6 +1,15 @@
+import random
+from hashlib import sha256
 from chessbot.irc.client import IRCClient
 from chessbot.irc.logger import Logger
 from chessbot.db.sqlite import DB
+
+def auth(token, tokens):
+    if token in tokens:
+        tokens.remove(token)
+        return True
+    else:
+        return False
 
 def main():
     db_path = "bot.db"
@@ -9,7 +18,7 @@ def main():
     nickname = "chessbot"
     channels = ["#testchess"]
     control_pattern = ":#!"
-
+    tokens = []
 
     db = DB(db_path)
     logger = Logger(db)
@@ -17,6 +26,8 @@ def main():
     irc = IRCClient(server, port, nickname)
     for channel in channels:
         irc.join(channel)
+
+    random.seed()
 
     while True:
         response = irc.get_text().split(' ', 3)
@@ -50,22 +61,34 @@ def main():
         #privmsg commands
         else:
             target = message['src'].split("!", 1)[0].strip(":")
-            if command[0] == "join" and len(command) == 2:
+            if command[0] == "get_token":
+                token = sha256(str(random.getrandbits(256)).encode()).hexdigest()
+                tokens.append(token)
+                irc.privmsg(target, token)
+            elif command[0] == "join" and len(command) == 3:
+                if not auth(command[2], tokens):
+                    continue
                 channel = command[1]
                 if channel in channels:
                     irc.privmsg(target, "Already in %s" % channel)
                     continue
                 irc.privmsg(target, ("Joining %s" % channel))
                 irc.join(channel)
-            elif command[0] == "part" and len(command) == 2:
+                channels.append(channel)
+            elif command[0] == "part" and len(command) == 3:
+                if not auth(command[2], tokens):
+                    continue
                 channel = command[1]
                 if channel not in channels:
                     irc.privmsg(target, "Not in %s" % channel)
                     continue
                 irc.privmsg(target, ("Leaving %s" % channel))
                 irc.part(channel)
-            elif command[0] == "quit":
+                channels.remove(channel)
+            elif command[0] == "quit" and len(command) == 2:
+                if not auth(command[1], tokens):
+                    continue
                 irc.privmsg(target, "Quitting!")
                 irc.quit()
                 db.close()
-                exit()
+                exit(0)
