@@ -43,7 +43,7 @@ def main():
         command = message['text'].lstrip(control_pattern)
 
         #chan based commands
-        if message['dst'].startswith("#"):
+        if message['dst'].startswith("#") and message['dst'] in channels:
             if command == "hello":
                 irc.privmsg(message['dst'], "Hello")
             elif command.startswith("mpfhf"):
