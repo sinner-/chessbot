@@ -1,15 +1,16 @@
 import datetime
 
 class Logger:
-
     def __init__(self, db):
-        self.db = db
+        self._db = db
 
     def log(self, src, dst, text):
-        self.db.cursor.execute(
-            "INSERT INTO logs VALUES (?, ?, ?, ?);",
-                (str(datetime.datetime.now().time()),
+        self._db.cursor.execute(
+            "INSERT INTO logs VALUES (?, ?, ?, ?);", (
+                str(datetime.datetime.now().time()),
                 src,
                 dst,
-                text,))
-        self.db.commit()
+                text,
+            )
+        )
+        self._db.commit()

@@ -1,94 +1,45 @@
-import random
-from hashlib import sha256
-from chessbot.irc.client import IRCClient
-from chessbot.irc.logger import Logger
-from chessbot.db.sqlite import DB
-
-def auth(token, tokens):
-    if token in tokens:
-        tokens.remove(token)
-        return True
-    else:
-        return False
+import os
+from chessbot.bot.controller import Controller
 
 def main():
-    db_path = "bot.db"
-    server = "irc.freenode.net"
-    port = 6697
-    nickname = "chessbot"
-    channels = ["#testchess"]
-    control_pattern = ":#!"
-    tokens = []
 
-    db = DB(db_path)
-    logger = Logger(db)
+    try:
+        db_path = os.environ['BOT_DB_PATH']
+    except KeyError:
+        db_path = "bot.db"
 
-    irc = IRCClient(server, port, nickname)
-    for channel in channels:
-        irc.join(channel)
+    try:
+        server = os.environ['BOT_IRC_SERVER']
+    except KeyError:
+        server = "irc.freenode.net"
 
-    random.seed()
+    try:
+        port = os.environ['BOT_IRC_PORT']
+    except KeyError:
+        port = "6697"
 
-    while True:
-        response = irc.get_text().split(' ', 3)
-        print(' '.join(response), end="")
+    try:
+        nickname = os.environ['BOT_NICKNAME']
+    except KeyError:
+        nickname = "chessbot"
 
-        if response[0] == "PING":
-            irc.send("PONG %s" % response[1])
-            print("PONG sent.")
+    try:
+        channels = os.environ['BOT_CHANNELS']
+    except KeyError:
+        channels = "#playchess"
 
-        if len(response) != 4:
-            continue
+    try:
+        admin_key = os.environ['BOT_ADMIN_KEY']
+    except KeyError:
+        print("You must define $BOT_ADMIN_KEY")
+        exit(1)
 
-        message = {}
-        message['src'] = response[0]
-        message['type'] = response[1]
-        message['dst'] = response[2]
-        message['text'] = response[3].strip()
-
-        logger.log(message['src'], message['dst'], message['text'])
-
-        if not (message['type'] == "PRIVMSG" and message['text'].startswith(control_pattern)):
-            continue
-
-        command = message['text'].lstrip(control_pattern).split(' ')
-
-        #chan based commands
-        if message['dst'].startswith("#") and message['dst'] in channels:
-            if command[0] == "hello":
-                irc.privmsg(message['dst'], "Hello")
-
-        #privmsg commands
-        else:
-            target = message['src'].split("!", 1)[0].strip(":")
-            if command[0] == "get_token":
-                token = sha256(str(random.getrandbits(256)).encode()).hexdigest()
-                tokens.append(token)
-                irc.privmsg(target, token)
-            elif command[0] == "join" and len(command) == 3:
-                if not auth(command[2], tokens):
-                    continue
-                channel = command[1]
-                if channel in channels:
-                    irc.privmsg(target, "Already in %s" % channel)
-                    continue
-                irc.privmsg(target, ("Joining %s" % channel))
-                irc.join(channel)
-                channels.append(channel)
-            elif command[0] == "part" and len(command) == 3:
-                if not auth(command[2], tokens):
-                    continue
-                channel = command[1]
-                if channel not in channels:
-                    irc.privmsg(target, "Not in %s" % channel)
-                    continue
-                irc.privmsg(target, ("Leaving %s" % channel))
-                irc.part(channel)
-                channels.remove(channel)
-            elif command[0] == "quit" and len(command) == 2:
-                if not auth(command[1], tokens):
-                    continue
-                irc.privmsg(target, "Quitting!")
-                irc.quit()
-                db.close()
-                exit(0)
+    controller = Controller(
+        db_path,
+        server,
+        port,
+        nickname,
+        channels,
+        admin_key
+    )
+    controller.start()
