@@ -11,11 +11,11 @@ setup(
     description='IRC chess bot',
     packages=find_packages(),
     install_requires=[
-        'Click>=6.7',
         'PyNaCl>=1.1.2'
     ],
     entry_points={
         'console_scripts': [
             'chessbot = chessbot.cmd.cli:main',
+            'chessbot-admin = chessbot.cmd.admin:main'
         ]},
 )
